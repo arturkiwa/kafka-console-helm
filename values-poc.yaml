@@ -1,5 +1,18 @@
 # Kafka Console – ustawienia POC. Zmień to, co oznaczone ZMIEŃ.
 
+# Obrazy. Bez dostępu do Docker Hub: podmień repository na adres w Artifactory, digest zostaje.
+image:
+  backend:
+    repository: docker.io/arturkiwa/kafka-console-backend
+    tag: "0.10.2"
+    digest: sha256:fb5068ba7b62b88ae17a82382b6970b7110337133c2fcc72af2521a4f31d0e52
+  frontend:
+    repository: docker.io/arturkiwa/kafka-console-frontend
+    tag: "0.10.2"
+    digest: sha256:ea55f03c8c540c63588a49248f2ef13b60c9a4fae5ebe7d84f98b76d6d8c5dfa
+  pullPolicy: IfNotPresent
+imagePullSecrets: []                     # np. [{ name: artifactory-pull }]
+
 host: kafka-console.example.com          # ZMIEŃ: adres, pod którym konsola ma być dostępna
 
 expose:
@@ -11,6 +24,10 @@ expose:
 # Baza: PostgreSQL instalowany razem z konsolą (ten sam namespace, hasło generuje Helm, dane na wolumenie 5 GiB).
 postgres:
   enabled: true
+  image:
+    repository: docker.io/library/postgres
+    tag: 17-alpine
+    digest: sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
   storageClass: ""                       # pusty = domyślna StorageClass klastra (kubectl get storageclass)
 
 # ZMIEŃ: klastry Kafki. Inne rodzaje połączeń (SSL, mTLS, JKS) – README, sekcja "Klaster z TLS".

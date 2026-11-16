@@ -89,8 +89,7 @@ Jeśli coś nie działa, ekran **Przegląd klastra** pokazuje, czego brakuje: ce
 
 ## Obrazy przez Artifactory
 
-Jeśli klaster nie ma dostępu do Docker Hub, dopisz do `values-poc.yaml` adresy obrazów w swoim proxy. Digesty
-zostają te same:
+Jeśli klaster nie ma dostępu do Docker Hub, dopisz do `values-poc.yaml` adresy obrazów w swoim proxy:
 
 ```yaml
 image:

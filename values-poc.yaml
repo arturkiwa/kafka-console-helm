@@ -1,15 +1,16 @@
 # Kafka Console – ustawienia POC. Zmień to, co oznaczone ZMIEŃ.
 
-# Obrazy. Bez dostępu do Docker Hub: podmień repository na adres w Artifactory, digest zostaje.
+# Obrazy. Nowa wersja = nowy tag. Bez dostępu do Docker Hub: podmień repository na adres w Artifactory.
+# digest pusty – liczy się tag (ustawiony digest wygrywa z tagiem).
 image:
   backend:
     repository: docker.io/arturkiwa/kafka-console-backend
     tag: "0.10.3"
-    digest: sha256:f650691ca8b8dbff75f33b29cec77099a737a792c7019f79981db6fcfac76c6e
+    digest: ""
   frontend:
     repository: docker.io/arturkiwa/kafka-console-frontend
     tag: "0.10.3"
-    digest: sha256:ce568be72c09999bddb3a97997458288cb92d1f1484c2fa234acb48d9dd35ac4
+    digest: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []                     # np. [{ name: artifactory-pull }]
 
@@ -27,7 +28,7 @@ postgres:
   image:
     repository: docker.io/library/postgres
     tag: 17-alpine
-    digest: sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
+    digest: ""
   storageClass: ""                       # pusty = domyślna StorageClass klastra (kubectl get storageclass)
 
 # ZMIEŃ: klastry Kafki.

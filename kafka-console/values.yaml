@@ -1,0 +1,114 @@
+# Kafka Console – Helm values. Everything an installation needs is here; nothing secret is: passwords, keys and
+# certificates come from Kubernetes Secrets or Vault (CSI) and are mounted as files.
+
+image:
+  backend:
+    # The published images (Docker Hub). A registry mirror inside the network: its address here, the same digest.
+    repository: docker.io/arturkiwa/kafka-console-backend
+    tag: ""        # or…
+    digest: sha256:2d84ed0a72f2532250fecd51179ca2f4fdab5b1d4bb57e83b441439ec789686c     # …sha256:… (preferred: what runs is exactly what was scanned)
+  frontend:
+    repository: docker.io/arturkiwa/kafka-console-frontend
+    tag: ""
+    digest: sha256:050f4393c144c94abe343498ee5ba89e2be8d828d3307249f43752c40beceaa4
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# The address users open (TLS ends on the ingress / gateway in front).
+host: kafka-console.example.com
+
+expose:
+  type: ingress          # ingress | httpRoute | none
+  ingress:
+    className: ""
+    annotations: {}
+    tlsSecretName: ""    # empty: TLS handled in front of the ingress
+  httpRoute:
+    parentRefs: []       # e.g. [{ name: public, namespace: istio-ingress, sectionName: https }]
+
+database:
+  url: jdbc:postgresql://postgres:5432/kafkaconsole   # …?sslmode=verify-full&sslrootcert=… for TLS
+  user: kafkaconsole
+  passwordSecret:
+    name: kafka-console-db
+    key: password
+
+# kafka-console.clusters – one entry per Kafka cluster (format: docs/deployment, "Adding a cluster"). Certificate and
+# password files point to clusterSecrets / Vault mounts below.
+clusters: []
+
+# Other kafka-console.* settings (message limits, session, event log …), merged into the same file, e.g.
+#   config:
+#     messages: { limits: { results: 200 } }
+config: {}
+
+# Kubernetes Secrets mounted for the clusters (JKS / PKCS12 / PEM files, password files):
+#   - name: prod-dc1                       # volume name
+#     secretName: kafka-prod-dc1           # e.g. a kubernetes.io/tls Secret from cert-manager
+#     mountPath: /etc/kafka-console/clusters/prod-dc1
+clusterSecrets: []
+
+# Secrets from Vault through the Secrets Store CSI driver (one SecretProviderClass, one volume):
+vault:
+  enabled: false
+  provider: vault
+  vaultAddress: https://vault.example.com
+  roleName: kafka-console
+  mountPath: /etc/kafka-console/vault
+  objects: []
+  #  - objectName: prod-dc1-client.crt     # file name under mountPath
+  #    secretPath: secret/data/kafka/prod-dc1
+  #    secretKey: tls.crt
+
+# The organization's CA (PEM, root + intermediates) – trusted next to the JVM's by clusters without their own
+# truststore, Schema Registry and Keycloak. A CA certificate is public: a ConfigMap.
+internalCa:
+  enabled: false
+  configMap: kafka-console-ca
+  key: internal-ca.crt
+
+# Single sign-on (Keycloak, OpenID Connect). The client secret: a Secret (or Vault) – never in values.
+oidc:
+  enabled: false
+  issuer: ""                 # https://sso.example.com/realms/main
+  clientId: kafka-console
+  redirectUri: ""            # https://<host>/api/v1/auth/oidc/callback
+  clientSecret:
+    name: kafka-console-oidc
+    key: client-secret
+
+backend:
+  replicas: 1                # sessions are in the database; the lag trend is per replica (see the deployment guide)
+  resources:
+    requests: { cpu: 200m, memory: 384Mi }
+    limits: { cpu: "2", memory: 1Gi }
+  extraEnv: []
+  podAnnotations:            # Prometheus (management port only)
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8081"
+    prometheus.io/path: /actuator/prometheus
+
+frontend:
+  replicas: 1
+  # Addresses of the proxies in front (ingress controller, load balancer) whose X-Forwarded-For is believed;
+  # the event log records the real client address from it.
+  trustedProxies: ""
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 500m, memory: 128Mi }
+
+networkPolicy:
+  enabled: true
+  # Who may reach the frontend (the ingress controller / gateway namespace).
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+  # Prometheus scraping the backend's management port; empty = none.
+  monitoringNamespace: monitoring
+  egress:
+    # Off: outgoing traffic not restricted. On: DNS + these destinations only (Kafka brokers, Schema Registry,
+    # Keycloak, the database …) – everything the backend needs must be listed.
+    enabled: false
+    to: []
+    #  - to: [{ ipBlock: { cidr: 10.20.0.0/24 } }]    # Kafka brokers
+    #    ports: [{ port: 9093 }]

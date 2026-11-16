@@ -1,0 +1,7 @@
+Kafka Console: https://{{ .Values.host }}
+
+{{- if not .Values.clusters }}
+No Kafka clusters configured yet (values: clusters) – the console starts, its cluster list is empty.
+{{- end }}
+First administrator (no password in any Secret):
+  kubectl -n {{ .Release.Namespace }} exec deploy/kafka-console-backend -- kafka-console-admin create-admin <login> "<name>"

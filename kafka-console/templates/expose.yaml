@@ -1,0 +1,47 @@
+{{- if eq .Values.expose.type "ingress" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kafka-console
+  labels: {{- include "kc.labels" . | nindent 4 }}
+  annotations:
+    # live message views are server-sent events: no buffering, long reads
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "900"
+    {{- with .Values.expose.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with .Values.expose.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with .Values.expose.ingress.tlsSecretName }}
+  tls:
+    - hosts: [{{ $.Values.host | quote }}]
+      secretName: {{ . }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: kafka-console-frontend, port: { number: 8080 } }
+{{- else if eq .Values.expose.type "httpRoute" }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kafka-console
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  parentRefs: {{- required "expose.httpRoute.parentRefs" .Values.expose.httpRoute.parentRefs | toYaml | nindent 4 }}
+  hostnames: [{{ .Values.host | quote }}]
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: / }
+      backendRefs:
+        - { name: kafka-console-frontend, port: 8080 }
+      timeouts:
+        request: 0s # live message views (SSE) must not be cut off
+{{- end }}

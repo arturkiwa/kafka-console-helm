@@ -1,0 +1,11 @@
+# kafka-console.* for the backend: the clusters and other settings, imported by Spring (KAFKA_CONSOLE_CLUSTERS_FILE).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kafka-console-config
+  labels: {{- include "kc.labels" . | nindent 4 }}
+data:
+  kafka-console.yml: |
+    {{- $settings := deepCopy .Values.config }}
+    {{- $_ := set $settings "clusters" .Values.clusters }}
+    {{- dict "kafka-console" $settings | toYaml | nindent 4 }}

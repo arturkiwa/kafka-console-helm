@@ -1,0 +1,90 @@
+{{- if .Values.networkPolicy.enabled }}
+# Ingress: deny by default, then the frontend from the ingress, the backend from the frontend (and Prometheus on
+# the management port). Kubelet probes come from the node.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-console-default-deny
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/part-of: kafka-console }
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-console-frontend
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kafka-console-frontend }
+  policyTypes: [Ingress]
+  ingress:
+    - from: {{- toYaml .Values.networkPolicy.ingressFrom | nindent 8 }}
+      ports: [{ port: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-console-backend
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kafka-console-backend }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: kafka-console-frontend }
+      ports: [{ port: 8080 }]
+    {{- with .Values.networkPolicy.monitoringNamespace }}
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: {{ . }} }
+      ports: [{ port: 8081 }]
+    {{- end }}
+{{- if .Values.networkPolicy.egress.enabled }}
+---
+# Egress of the backend: DNS and the listed destinations only (Kafka, Schema Registry, Keycloak, the database …).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-console-backend-egress
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kafka-console-backend }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    {{- with .Values.networkPolicy.egress.to }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+---
+# Egress of the frontend: DNS and the backend.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kafka-console-frontend-egress
+  labels: {{- include "kc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: kafka-console-frontend }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+    - to:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: kafka-console-backend }
+      ports: [{ port: 8080 }]
+{{- end }}
+{{- end }}

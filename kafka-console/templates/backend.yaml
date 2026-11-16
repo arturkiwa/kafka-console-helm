@@ -109,6 +109,9 @@ spec:
             {{- if .Values.oidc.enabled }}
             - { name: oidc, mountPath: /etc/kafka-console/oidc, readOnly: true }
             {{- end }}
+            {{- if .Files.Glob "certs/*/*" }}
+            - { name: certs, mountPath: /etc/kafka-console/certs, readOnly: true }
+            {{- end }}
             {{- range .Values.clusterSecrets }}
             - { name: {{ .name }}, mountPath: {{ .mountPath }}, readOnly: true }
             {{- end }}
@@ -127,6 +130,10 @@ spec:
         {{- if .Values.oidc.enabled }}
         - name: oidc
           secret: { secretName: {{ .Values.oidc.clientSecret.name }}, defaultMode: 0440 }
+        {{- end }}
+        {{- if .Files.Glob "certs/*/*" }}
+        - name: certs
+          secret: { secretName: kafka-console-certs, defaultMode: 0440 }
         {{- end }}
         {{- range .Values.clusterSecrets }}
         - name: {{ .name }}

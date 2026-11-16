@@ -7,5 +7,40 @@ metadata:
 data:
   kafka-console.yml: |
     {{- $settings := deepCopy .Values.config }}
-    {{- $_ := set $settings "clusters" .Values.clusters }}
+    {{- $clusters := list }}
+    {{- range .Values.clusters }}
+    {{- $c := deepCopy . }}
+    {{- $dir := printf "certs/%s/" $c.id }}
+    {{- if or ($.Files.Get (print $dir "ca.crt")) ($.Files.Get (print $dir "tls.crt")) }}
+    {{- $sec := deepCopy (default dict $c.security) }}
+    {{- if not $sec.protocol }}{{ $_ := set $sec "protocol" "SSL" }}{{ end }}
+    {{- if and ($.Files.Get (print $dir "ca.crt")) (not $sec.truststore) }}
+    {{- $_ := set $sec "truststore" (dict "file" (printf "/etc/kafka-console/certs/%s.ca.crt" $c.id)) }}
+    {{- end }}
+    {{- if and ($.Files.Get (print $dir "tls.crt")) ($.Files.Get (print $dir "tls.key")) (not $sec.certificate) }}
+    {{- $_ := set $sec "certificate" (dict "file" (printf "/etc/kafka-console/certs/%s.tls.crt" $c.id) "key-file" (printf "/etc/kafka-console/certs/%s.tls.key" $c.id)) }}
+    {{- end }}
+    {{- $_ := set $c "security" $sec }}
+    {{- end }}
+    {{- $clusters = append $clusters $c }}
+    {{- end }}
+    {{- $_ := set $settings "clusters" $clusters }}
     {{- dict "kafka-console" $settings | toYaml | nindent 4 }}
+{{- $certs := .Files.Glob "certs/*/*" }}
+{{- if $certs }}
+---
+# Certificates put in the chart's certs/<cluster id>/ directory (ca.crt, tls.crt, tls.key), mounted for the backend.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kafka-console-certs
+  labels: {{- include "kc.labels" . | nindent 4 }}
+type: Opaque
+data:
+  {{- range $path, $_ := $certs }}
+  {{- $parts := splitList "/" $path }}
+  {{- if has (index $parts 2) (list "ca.crt" "tls.crt" "tls.key") }}
+  {{ printf "%s.%s" (index $parts 1) (index $parts 2) }}: {{ $.Files.Get $path | b64enc }}
+  {{- end }}
+  {{- end }}
+{{- end }}

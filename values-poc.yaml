@@ -30,16 +30,15 @@ postgres:
     digest: sha256:a77aa70e641402a21411b92b721c58d10f23b50ae5fdd2333efd22d166e1e5f7
   storageClass: ""                       # pusty = domyślna StorageClass klastra (kubectl get storageclass)
 
-# ZMIEŃ: klastry Kafki. Inne rodzaje połączeń (SSL, mTLS, JKS) – README, sekcja "Klaster z TLS".
+# ZMIEŃ: klastry Kafki.
+# Kafka po SSL: wrzuć CA brokera do kafka-console/certs/<id>/ca.crt (np. kafka-console/certs/test-01/ca.crt)
+# i ustaw protocol: SSL. Przy mTLS dorzuć tam też tls.crt i tls.key. Nic więcej nie trzeba.
 clusters:
   - id: test-01                          # małe litery, cyfry, myślnik; nie zmieniać później
     name: Kafka TEST
     environment: TEST                    # PROD | PREPROD | UAT | TEST | DEV
-    bootstrap: kafka-1.example:9092,kafka-2.example:9092
-    security: { protocol: PLAINTEXT }
-    # schema-registry: { url: http://schema-registry.example:8081 }
-
-clusterSecrets: []                       # pliki certyfikatów – README, "Klaster z TLS"
+    bootstrap: kafka-1.example:9093      # nazwy z certyfikatu brokera, nie IP
+    security: { protocol: SSL }          # PLAINTEXT, gdy bez TLS
 
 config:
   access:

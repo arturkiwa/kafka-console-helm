@@ -58,51 +58,18 @@ kubectl -n kafka-console port-forward svc/kafka-console-frontend 8080:8080
 Potem otwórz `http://localhost:8080`. Adres musi być dokładnie `localhost`, bo przez zwykłe http z innego adresu
 przeglądarka nie zapisze ciasteczka sesji. Z innego komputera użyj tunelu: `ssh -L 8080:127.0.0.1:8080 <maszyna>`.
 
-## Klaster z TLS
+## Kafka po SSL
 
-Certyfikaty wrzuć do Secretu:
-
-```sh
-kubectl -n kafka-console create secret generic kafka-test-01 \
-  --from-file=ca.crt --from-file=tls.crt --from-file=tls.key
-```
-
-Plik `tls.crt` i `tls.key` dodajesz tylko wtedy, gdy broker wymaga certyfikatu klienta (mTLS).
-
-W `values-poc.yaml`:
-
-```yaml
-clusters:
-  - id: test-01
-    name: Kafka TEST
-    environment: TEST
-    bootstrap: kafka-1.example:9093
-    security:
-      protocol: SSL
-      truststore: { file: /etc/kafka-console/clusters/test-01/ca.crt }
-      certificate:                       # tylko mTLS
-        file: /etc/kafka-console/clusters/test-01/tls.crt
-        key-file: /etc/kafka-console/clusters/test-01/tls.key
-
-clusterSecrets:
-  - name: test-01
-    secretName: kafka-test-01
-    mountPath: /etc/kafka-console/clusters/test-01
-```
-
-Keystore JKS lub PKCS12 też zadziała:
-
-```yaml
-      keystore: { file: /etc/kafka-console/clusters/test-01/keystore.jks, password-file: /etc/kafka-console/clusters/test-01/keystore.password }
-```
-
-Adres w `bootstrap` musi być nazwą z certyfikatu brokera, a nie adresem IP.
-
-Zmiany wprowadzasz tak:
+1. Skopiuj CA brokera do katalogu chartu: `kafka-console/certs/<id klastra>/ca.crt`, np.
+   `kafka-console/certs/test-01/ca.crt`. Przy mTLS dorzuć tam też `tls.crt` i `tls.key`.
+2. W `values-poc.yaml` ustaw dla tego klastra `security: { protocol: SSL }`.
+3. Wdróż:
 
 ```sh
-helm upgrade kafka-console kafka-console-0.10.2.tgz -n kafka-console -f values-poc.yaml
+helm upgrade kafka-console ./kafka-console -n kafka-console -f values-poc.yaml
 ```
+
+Chart sam wgra certyfikaty do klastra i wskaże je konsoli. W `bootstrap` podaj nazwy z certyfikatu brokera, nie IP.
 
 ## ACL Kafki
 

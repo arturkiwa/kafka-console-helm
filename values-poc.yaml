@@ -8,10 +8,10 @@ expose:
     className: nginx                     # ZMIEŃ: kubectl get ingressclass
     tlsSecretName: ""                    # Secret z certyfikatem dla host; pusty = TLS kończy się przed ingressem
 
-# Baza z postgres-poc.yaml (ten sam namespace). Hasło: Secret kafka-console-db (krok 1).
+# Baza PostgreSQL 16+. Hasło: Secret kafka-console-db (krok 1).
 database:
-  url: jdbc:postgresql://kafka-console-postgres:5432/kafkaconsole
-  user: kafkaconsole
+  url: jdbc:postgresql://postgres.example:5432/kafkaconsole   # ZMIEŃ
+  user: kafkaconsole                                           # ZMIEŃ
   passwordSecret: { name: kafka-console-db, key: password }
 
 # ZMIEŃ: klastry Kafki. Inne rodzaje połączeń (SSL, mTLS, JKS) – README, sekcja "Klaster z TLS".

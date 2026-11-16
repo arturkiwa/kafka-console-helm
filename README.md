@@ -10,50 +10,40 @@ Obrazy (publiczne, Docker Hub), wersja `0.10.1`:
 
 ## Co pobrać
 
-Z zakładki **Releases** (`v0.10.1`) trzy pliki:
+Z zakładki **Releases** (`v0.10.1`) dwa pliki:
 
 - `kafka-console-0.10.1.tgz` – chart Helm,
-- `values-poc.yaml` – ustawienia,
-- `postgres-poc.yaml` – baza PostgreSQL na czas POC.
+- `values-poc.yaml` – ustawienia.
 
 Przenieś je na maszynę, z której masz `kubectl` i `helm` do klastra.
 
-## 1. Namespace i hasło do bazy
+## 1. Baza i hasło
+
+Konsola potrzebuje bazy PostgreSQL 16 lub nowszej, z założoną bazą i użytkownikiem. Hasło tego użytkownika wpisz do Secretu:
 
 ```sh
 kubectl create namespace kafka-console
-kubectl -n kafka-console create secret generic kafka-console-db --from-literal=password="$(openssl rand -hex 24)"
+kubectl -n kafka-console create secret generic kafka-console-db --from-literal=password='HASLO-DO-BAZY'
 ```
 
-Hasła nie musisz znać: korzystają z niego tylko baza i konsola.
-
-## 2. Baza
-
-```sh
-kubectl -n kafka-console apply -f postgres-poc.yaml
-kubectl -n kafka-console rollout status statefulset/kafka-console-postgres
-```
-
-Potrzebna jest domyślna StorageClass (`kubectl get storageclass`), bo baza zajmuje wolumen 5 GiB.
-Jeśli masz firmową bazę PostgreSQL 16 lub nowszą, pomiń ten krok i w `values-poc.yaml` ustaw `database.url` i `database.user`.
-
-## 3. Ustawienia
+## 2. Ustawienia
 
 W `values-poc.yaml` zmień miejsca oznaczone `ZMIEŃ`:
 
 - `host`: adres konsoli,
+- `database.url`, `database.user`: adres bazy i użytkownik,
 - `expose.ingress.className`: klasa ingressu (`kubectl get ingressclass`),
 - `clusters`: adresy brokerów Kafki,
 - `networkPolicy.ingressFrom`: namespace kontrolera ingress.
 
-## 4. Instalacja
+## 3. Instalacja
 
 ```sh
 helm install kafka-console kafka-console-0.10.1.tgz -n kafka-console -f values-poc.yaml
 kubectl -n kafka-console rollout status deploy/kafka-console-backend
 ```
 
-## 5. Pierwszy administrator
+## 4. Pierwszy administrator
 
 ```sh
 kubectl -n kafka-console exec deploy/kafka-console-backend -- kafka-console-admin create-admin admin "Administrator"
@@ -62,11 +52,11 @@ kubectl -n kafka-console exec deploy/kafka-console-backend -- kafka-console-admi
 Polecenie wypisze hasło jednorazowe. Przy pierwszym logowaniu konsola każe je zmienić.
 Uprawnienia do klastrów nadajesz sobie w konsoli, w zakładce **Dostęp**.
 
-## 6. Otwarcie konsoli
+## 5. Otwarcie konsoli
 
 Otwórz `https://<host>`.
 
-Jeśli nie masz ingressu, w kroku 3 ustaw `expose.type: none` i połącz się przez port-forward:
+Jeśli nie masz ingressu, w kroku 2 ustaw `expose.type: none` i połącz się przez port-forward:
 
 ```sh
 kubectl -n kafka-console port-forward svc/kafka-console-frontend 8080:8080
@@ -148,13 +138,9 @@ image:
   frontend: { repository: artifactory.example/docker/arturkiwa/kafka-console-frontend }
 ```
 
-To samo dotyczy obrazu `postgres:17-alpine` w `postgres-poc.yaml`.
-
 ## Usunięcie
 
 ```sh
 helm -n kafka-console uninstall kafka-console
 kubectl delete namespace kafka-console
 ```
-
-Usunięcie namespace kasuje też bazę.

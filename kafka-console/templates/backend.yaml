@@ -41,6 +41,17 @@ spec:
         runAsGroup: 10001
         fsGroup: 10001        # mounted secrets (mode 0440) readable by the application's group
         seccompProfile: { type: RuntimeDefault }
+      {{- if .Values.postgres.enabled }}
+      initContainers: # wait for the bundled database – the backend would otherwise restart until it is up
+        - name: wait-for-postgres
+          image: {{ include "kc.image" .Values.postgres.image }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [sh, -c, "until pg_isready -h kafka-console-postgres -p 5432 -U kafkaconsole -q; do sleep 2; done"]
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 64Mi }
+          securityContext: {{- include "kc.containerSecurity" . | nindent 12 }}
+      {{- end }}
       containers:
         - name: backend
           image: {{ include "kc.image" .Values.image.backend }}
@@ -49,11 +60,19 @@ spec:
             - { name: http, containerPort: 8080 }
             - { name: management, containerPort: 8081 }
           env:
+            {{- if .Values.postgres.enabled }}
+            - { name: DB_URL, value: "jdbc:postgresql://kafka-console-postgres:5432/kafkaconsole" }
+            - { name: DB_USER, value: kafkaconsole }
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: kafka-console-postgres, key: password }
+            {{- else }}
             - { name: DB_URL, value: {{ .Values.database.url | quote }} }
             - { name: DB_USER, value: {{ .Values.database.user | quote }} }
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef: { name: {{ .Values.database.passwordSecret.name }}, key: {{ .Values.database.passwordSecret.key }} }
+            {{- end }}
             - { name: KAFKA_CONSOLE_CLUSTERS_FILE, value: /etc/kafka-console/config/kafka-console.yml }
             - { name: LOGGING_STRUCTURED_FORMAT_CONSOLE, value: ecs }
             {{- if .Values.internalCa.enabled }}

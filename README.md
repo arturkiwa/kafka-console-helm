@@ -3,47 +3,40 @@
 Webowa konsola do Kafki: topiki, wiadomości, grupy konsumentów, schematy, ACL, uprawnienia per klaster i dziennik
 zdarzeń. Instalujesz ją jednym poleceniem `helm install`.
 
-Obrazy (publiczne, Docker Hub), wersja `0.10.1`:
+Obrazy (publiczne, Docker Hub), wersja `0.10.2`:
 
 - `docker.io/arturkiwa/kafka-console-backend`
 - `docker.io/arturkiwa/kafka-console-frontend`
 
 ## Co pobrać
 
-Z zakładki **Releases** (`v0.10.1`) dwa pliki:
+Z zakładki **Releases** (`v0.10.2`) dwa pliki:
 
-- `kafka-console-0.10.1.tgz` – chart Helm,
+- `kafka-console-0.10.2.tgz` – chart Helm,
 - `values-poc.yaml` – ustawienia.
 
 Przenieś je na maszynę, z której masz `kubectl` i `helm` do klastra.
 
-## 1. Baza i hasło
+Baza PostgreSQL instaluje się razem z konsolą. Potrzebna jest tylko StorageClass dla wolumenu 5 GiB.
 
-Konsola potrzebuje bazy PostgreSQL 16 lub nowszej, z założoną bazą i użytkownikiem. Hasło tego użytkownika wpisz do Secretu:
-
-```sh
-kubectl create namespace kafka-console
-kubectl -n kafka-console create secret generic kafka-console-db --from-literal=password='HASLO-DO-BAZY'
-```
-
-## 2. Ustawienia
+## 1. Ustawienia
 
 W `values-poc.yaml` zmień miejsca oznaczone `ZMIEŃ`:
 
 - `host`: adres konsoli,
-- `database.url`, `database.user`: adres bazy i użytkownik,
 - `expose.ingress.className`: klasa ingressu (`kubectl get ingressclass`),
 - `clusters`: adresy brokerów Kafki,
 - `networkPolicy.ingressFrom`: namespace kontrolera ingress.
 
-## 3. Instalacja
+## 2. Instalacja
 
 ```sh
-helm install kafka-console kafka-console-0.10.1.tgz -n kafka-console -f values-poc.yaml
+helm install kafka-console kafka-console-0.10.2.tgz -n kafka-console --create-namespace -f values-poc.yaml
+kubectl -n kafka-console rollout status statefulset/kafka-console-postgres
 kubectl -n kafka-console rollout status deploy/kafka-console-backend
 ```
 
-## 4. Pierwszy administrator
+## 3. Pierwszy administrator
 
 ```sh
 kubectl -n kafka-console exec deploy/kafka-console-backend -- kafka-console-admin create-admin admin "Administrator"
@@ -52,11 +45,11 @@ kubectl -n kafka-console exec deploy/kafka-console-backend -- kafka-console-admi
 Polecenie wypisze hasło jednorazowe. Przy pierwszym logowaniu konsola każe je zmienić.
 Uprawnienia do klastrów nadajesz sobie w konsoli, w zakładce **Dostęp**.
 
-## 5. Otwarcie konsoli
+## 4. Otwarcie konsoli
 
 Otwórz `https://<host>`.
 
-Jeśli nie masz ingressu, w kroku 2 ustaw `expose.type: none` i połącz się przez port-forward:
+Jeśli nie masz ingressu, w kroku 1 ustaw `expose.type: none` i połącz się przez port-forward:
 
 ```sh
 kubectl -n kafka-console port-forward svc/kafka-console-frontend 8080:8080
@@ -108,7 +101,7 @@ Adres w `bootstrap` musi być nazwą z certyfikatu brokera, a nie adresem IP.
 Zmiany wprowadzasz tak:
 
 ```sh
-helm upgrade kafka-console kafka-console-0.10.1.tgz -n kafka-console -f values-poc.yaml
+helm upgrade kafka-console kafka-console-0.10.2.tgz -n kafka-console -f values-poc.yaml
 ```
 
 ## ACL Kafki
@@ -136,6 +129,8 @@ zostają te same:
 image:
   backend:  { repository: artifactory.example/docker/arturkiwa/kafka-console-backend }
   frontend: { repository: artifactory.example/docker/arturkiwa/kafka-console-frontend }
+postgres:
+  image: { repository: artifactory.example/docker/library/postgres }
 ```
 
 ## Usunięcie
@@ -144,3 +139,5 @@ image:
 helm -n kafka-console uninstall kafka-console
 kubectl delete namespace kafka-console
 ```
+
+Usunięcie namespace kasuje też bazę.

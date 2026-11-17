@@ -5,11 +5,11 @@
 image:
   backend:
     repository: docker.io/arturkiwa/kafka-console-backend
-    tag: "0.10.12"
+    tag: "0.10.13"
     digest: ""
   frontend:
     repository: docker.io/arturkiwa/kafka-console-frontend
-    tag: "0.10.12"
+    tag: "0.10.13"
     digest: ""
   pullPolicy: IfNotPresent
 imagePullSecrets: []                     # np. [{ name: artifactory-pull }]

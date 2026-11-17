@@ -3,16 +3,16 @@
 Webowa konsola do Kafki: topiki, wiadomości, grupy konsumentów, schematy, ACL, uprawnienia per klaster i dziennik
 zdarzeń. Instalujesz ją jednym poleceniem `helm install`.
 
-Obrazy (publiczne, Docker Hub), wersja `0.10.17`:
+Obrazy (publiczne, Docker Hub), wersja `0.10.18`:
 
 - `docker.io/arturkiwa/kafka-console-backend`
 - `docker.io/arturkiwa/kafka-console-frontend`
 
 ## Co pobrać
 
-Z zakładki **Releases** (`v0.10.17`) dwa pliki:
+Z zakładki **Releases** (`v0.10.18`) dwa pliki:
 
-- `kafka-console-0.10.17.tgz` – chart Helm,
+- `kafka-console-0.10.18.tgz` – chart Helm,
 - `values-poc.yaml` – ustawienia.
 
 Przenieś je na maszynę, z której masz `kubectl` i `helm` do klastra.
@@ -31,7 +31,7 @@ W `values-poc.yaml` zmień miejsca oznaczone `ZMIEŃ`:
 ## 2. Instalacja
 
 ```sh
-helm install kafka-console kafka-console-0.10.17.tgz -n kafka-console --create-namespace -f values-poc.yaml
+helm install kafka-console kafka-console-0.10.18.tgz -n kafka-console --create-namespace -f values-poc.yaml
 kubectl -n kafka-console rollout status statefulset/kafka-console-postgres
 kubectl -n kafka-console rollout status deploy/kafka-console-backend
 ```

@@ -6,11 +6,11 @@ image:
     # The published images (Docker Hub). A registry mirror inside the network: its address here, the same digest.
     repository: docker.io/arturkiwa/kafka-console-backend
     tag: ""        # or…
-    digest: sha256:bf81d140268d9f3e139e701cc1f1e863cfcd62996972a0c0bd599f527ca3509c     # …sha256:… (preferred: what runs is exactly what was scanned)
+    digest: sha256:740513077b1fdc9438503e4c4bb2aeae9a0c9e3e625b96d325c7f87748b15ec7     # …sha256:… (preferred: what runs is exactly what was scanned)
   frontend:
     repository: docker.io/arturkiwa/kafka-console-frontend
     tag: ""
-    digest: sha256:d9373e52a3dc11c29ab071480a80a3acb7deb7aa3f7e71124cab8be15f13cfce
+    digest: sha256:6a66b15c8f487ed9e2ff4b58b2c9a6b5e1bf76b5e9be0073e4eb52daf91cf030
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 

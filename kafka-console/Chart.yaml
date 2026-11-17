@@ -2,6 +2,6 @@ apiVersion: v2
 name: kafka-console
 description: Kafka Console – a Kafka web console (permissions, data masking, event log)
 type: application
-version: 0.10.16
-appVersion: "0.10.16"
+version: 0.10.17
+appVersion: "0.10.17"
 kubeVersion: ">=1.29.0-0"
